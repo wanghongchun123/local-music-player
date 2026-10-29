@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212">
+
+    <!-- 顶部：标题 + 当前路径 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tv_picker_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="选择文件夹"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_picker_path"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="#B3B3B3"
+            android:textSize="13sp"
+            android:ellipsize="middle"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- 常用文件夹区块 -->
+    <TextView
+        android:id="@+id/tv_fav_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="4dp"
+        android:text="常用文件夹（点选快速跳转，长按下方文件夹可收藏）"
+        android:textColor="#1DB954"
+        android:textSize="12sp" />
+
+    <ListView
+        android:id="@+id/list_picker_favs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:divider="#1F1F1F"
+        android:dividerHeight="1dp" />
+
+    <!-- 当前目录提示 -->
+    <TextView
+        android:id="@+id/tv_cur_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="8dp"
+        android:text="当前目录下的文件夹"
+        android:textColor="#B3B3B3"
+        android:textSize="12sp" />
+
+    <!-- 文件夹列表 -->
+    <ListView
+        android:id="@+id/list_picker_dirs"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="#1F1F1F"
+        android:dividerHeight="1dp" />
+
+    <!-- 底部按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/btn_picker_up"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="上一级"
+            android:textColor="#B3B3B3"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/btn_picker_confirm"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="选择此文件夹"
+            android:textColor="#1DB954"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

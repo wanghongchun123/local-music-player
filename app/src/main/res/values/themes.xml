@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 主主题：强制深色，父主题用 DayNight 但锁定夜间模式 -->
+    <style name="Theme.LocalMusicPlayer" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#121212</item>
+        <item name="colorPrimary">#1DB954</item>
+        <item name="colorPrimaryDark">#121212</item>
+        <item name="colorAccent">#1DB954</item>
+        <!-- 状态栏 / 导航栏颜色 -->
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#121212</item>
+        <!-- 弹窗（AlertDialog）也用深色 -->
+        <item name="alertDialogTheme">@style/Theme.LocalMusicPlayer.Dialog</item>
+        <item name="android:alertDialogTheme">@style/Theme.LocalMusicPlayer.Dialog</item>
+    </style>
+
+    <!-- 深色对话框主题 -->
+    <style name="Theme.LocalMusicPlayer.Dialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">#1E1E1E</item>
+        <item name="android:background">#1E1E1E</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#B3B3B3</item>
+        <item name="android:colorAccent">#1DB954</item>
+        <item name="colorAccent">#1DB954</item>
+    </style>
+</resources>
