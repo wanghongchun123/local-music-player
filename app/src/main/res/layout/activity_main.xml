@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:background="#121212">
 
-    <!-- 顶部栏：目录 + 睡眠倒计时 -->
+    <!-- 顶部栏：目录 + 睡眠倒计时 + 亮屏自动播 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -28,6 +28,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="睡眠"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/btn_screen_resume"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="亮屏：关"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:padding="8dp" />

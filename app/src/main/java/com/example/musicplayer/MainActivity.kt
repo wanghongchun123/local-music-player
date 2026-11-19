@@ -39,6 +39,9 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_LAST_POSITION = "last_position"
         // 按目录记忆播放位置：key 为 "pos_<目录uri的hash>"，value 为 "songUri|position"
         private const val KEY_POS_PREFIX = "pos_"
+        // 亮屏自动播放开关（默认关，开启后持久化）与续播倒计时分钟数
+        private const val KEY_SCREEN_RESUME_ON = "screen_resume_on"
+        private const val KEY_SCREEN_RESUME_MIN = "screen_resume_min"
     }
 
     private lateinit var tvSongTitle: TextView
@@ -46,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTotalTime: TextView
     private lateinit var btnDir: TextView
     private lateinit var btnSleep: TextView
+    private lateinit var btnScreenResume: TextView
     private lateinit var seekBar: SeekBar
     private lateinit var btnPlayPause: TextView
     private lateinit var btnPrev: TextView
@@ -79,10 +83,10 @@ class MainActivity : AppCompatActivity() {
             timerRemainingMs -= 1000
             if (timerRemainingMs <= 0) {
                 timerRunning = false
-                btnSleep.text = "睡眠"
+                updateSleepButtonText()
                 shutdownApp()
             } else {
-                btnSleep.text = "睡眠 " + formatRemain(timerRemainingMs)
+                updateSleepButtonText()
                 handler.postDelayed(this, 1000)
             }
         }
@@ -158,9 +162,15 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         setupListeners()
+        updateSleepButtonText()
+        updateScreenResumeButtonText()
 
         // 启动时启用「记忆播放位置」恢复
         pendingResume = true
+
+        // 首次启动引导：未开启「无障碍服务」时提示去系统设置开启，
+        // 用于抖音/快手等第三方 App 进入暂停、退出自动续播
+        checkAccessibilityServicePermission()
 
         // 目录扫描放到后台线程，避免阻塞主线程
         autoLoadDirectoriesAsync()
@@ -172,12 +182,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** 检查「无障碍服务」权限，未授权则弹窗引导去系统设置开启 */
+    private fun checkAccessibilityServicePermission() {
+        // 无障碍服务未开启则引导
+        if (isAccessibilityEnabled()) return
+
+        // 已弹过就不再重复弹
+        val prefs = getSharedPreferences("music_player_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("accessibility_prompted", false)) return
+
+        AlertDialog.Builder(this)
+            .setTitle("开启无障碍服务")
+            .setMessage("为让「退出抖音/快手后自动续播」生效，需要你开启一次无障碍服务。\n\n点击确定后将跳转到无障碍设置，请找到「本地音乐播放器」并打开开关。")
+            .setPositiveButton("去开启") { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {
+                    startActivity(Intent(Settings.ACTION_SETTINGS))
+                }
+            }
+            .setNegativeButton("暂不", null)
+            .setOnDismissListener {
+                prefs.edit().putBoolean("accessibility_prompted", true).apply()
+            }
+            .show()
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val expected = "$packageName/${ForegroundAccessibilityService::class.java.name}"
+        val enabled = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+    }
+
     private fun bindViews() {
         tvSongTitle = findViewById(R.id.tv_song_title)
         tvCurrentTime = findViewById(R.id.tv_current_time)
         tvTotalTime = findViewById(R.id.tv_total_time)
         btnDir = findViewById(R.id.btn_dir)
         btnSleep = findViewById(R.id.btn_sleep)
+        btnScreenResume = findViewById(R.id.btn_screen_resume)
         seekBar = findViewById(R.id.seek_bar)
         btnPlayPause = findViewById(R.id.btn_play_pause)
         btnPrev = findViewById(R.id.btn_prev)
@@ -195,6 +241,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         btnSleep.setOnClickListener { showSleepDialog() }
+
+        btnScreenResume.setOnClickListener { toggleScreenResume() }
 
         btnPlayPause.setOnClickListener { togglePlayPause() }
         btnPrev.setOnClickListener { playbackService?.playPrevious() }
@@ -939,19 +987,90 @@ class MainActivity : AppCompatActivity() {
     // ---------- 睡眠倒计时 ----------
 
     private fun showSleepDialog() {
-        val options = arrayOf("关闭", "15 分钟", "20 分钟", "30 分钟", "40 分钟", "50 分钟", "60 分钟", "90 分钟")
-        val minutesArr = longArrayOf(0, 15, 20, 30, 40, 50, 60, 90)
+        // 时长选项
+        val options = arrayOf("关闭", "10 分钟", "15 分钟", "20 分钟", "30 分钟", "45 分钟", "60 分钟")
+        val minutesArr = longArrayOf(0, 10, 15, 20, 30, 45, 60)
+
         AlertDialog.Builder(this)
             .setTitle("睡眠倒计时")
             .setItems(options) { _, which ->
                 val minutes = minutesArr[which]
-                if (minutes <= 0) {
-                    cancelTimer()
-                } else {
-                    startTimer(minutes * 60L * 1000L)
-                }
+                if (minutes <= 0) cancelTimer() else startTimer(minutes * 60L * 1000L)
             }
             .show()
+    }
+
+    /** 点「亮屏自动播」按钮：直接切换开关，不弹对话框；开启时自动弹出续播倒计时时长选择 */
+    private fun toggleScreenResume() {
+        val on = !getScreenResumeOn()
+        setScreenResumeOn(on)
+        if (on) {
+            showResumeMinutesPicker()
+        }
+    }
+
+    /** 亮屏续播倒计时时长选择 */
+    private fun showResumeMinutesPicker() {
+        val options = arrayOf("关闭", "10 分钟", "15 分钟", "20 分钟", "30 分钟", "45 分钟", "60 分钟")
+        val minutesArr = longArrayOf(0, 10, 15, 20, 30, 45, 60)
+        AlertDialog.Builder(this)
+            .setTitle("亮屏续播倒计时")
+            .setItems(options) { _, which ->
+                setScreenResumeMin(minutesArr[which].toInt())
+            }
+            .show()
+    }
+
+    private fun getScreenResumeOn(): Boolean {
+        return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_SCREEN_RESUME_ON, false)
+    }
+
+    private fun setScreenResumeOn(on: Boolean) {
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_SCREEN_RESUME_ON, on).apply()
+        Toast.makeText(this, "亮屏自动播放已" + if (on) "开启" else "关闭", Toast.LENGTH_SHORT).show()
+        updateScreenResumeButtonText()
+    }
+
+    /** 刷新「亮屏自动播」开关按钮文案：缩短文案显示开关状态 + 续播倒计时时长 */
+    private fun updateScreenResumeButtonText() {
+        val on = getScreenResumeOn()
+        val min = getScreenResumeMin()
+        val text = when {
+            !on -> "亮屏：关"
+            min > 0 -> "亮屏：${min}分"
+            else -> "亮屏：开"
+        }
+        btnScreenResume.text = text
+        btnScreenResume.setTextColor(
+            if (on) 0xFF1DB954.toInt() else 0xFFFFFFFF.toInt()
+        )
+    }
+
+    /** 刷新睡眠按钮文案 */
+    private fun updateSleepButtonText() {
+        btnSleep.text = if (timerRunning) {
+            "睡眠 " + formatRemain(timerRemainingMs)
+        } else {
+            "睡眠"
+        }
+    }
+
+    private fun getScreenResumeMin(): Int {
+        return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_SCREEN_RESUME_MIN, 15)
+    }
+
+    private fun setScreenResumeMin(min: Int) {
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_SCREEN_RESUME_MIN, min).apply()
+        Toast.makeText(
+            this,
+            "亮屏续播倒计时已设为" + if (min <= 0) "关闭" else "$min 分钟",
+            Toast.LENGTH_SHORT
+        ).show()
+        updateScreenResumeButtonText()
     }
 
     private fun startTimer(totalMs: Long) {
@@ -959,17 +1078,24 @@ class MainActivity : AppCompatActivity() {
         timerRunning = true
         handler.removeCallbacks(timerTick)
         handler.postDelayed(timerTick, 1000)
-        btnSleep.text = "睡眠 " + formatRemain(timerRemainingMs)
+        updateSleepButtonText()
     }
 
     private fun cancelTimer() {
         timerRunning = false
         handler.removeCallbacks(timerTick)
-        btnSleep.text = "睡眠"
+        updateSleepButtonText()
     }
 
     private fun shutdownApp() {
-        playbackService?.stopPlayback()
+        // 通知服务进入「睡眠等待」状态：暂停播放、保留服务、注册亮屏广播，
+        // 下次亮屏自动续播 + 设 15 分钟睡眠倒计时。
+        val svcIntent = Intent(this, PlaybackService::class.java)
+            .setAction(PlaybackService.ACTION_SLEEP_STOP)
+        try {
+            startService(svcIntent)
+        } catch (_: Exception) {
+        }
         handler.removeCallbacksAndMessages(null)
         Toast.makeText(this, "睡眠时间到，正在关闭", Toast.LENGTH_SHORT).show()
         handler.postDelayed({

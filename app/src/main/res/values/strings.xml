@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">本地音乐播放器</string>
+    <string name="accessibility_service_label">前台检测服务</string>
+    <string name="accessibility_service_description">用于检测抖音、快手等应用的前台切换，实现退出后自动续播</string>
 </resources>
