@@ -229,6 +229,8 @@ class MainActivity : AppCompatActivity() {
         btnPrev = findViewById(R.id.btn_prev)
         btnNext = findViewById(R.id.btn_next)
         listSongs = findViewById(R.id.list_songs)
+        findViewById<TextView>(R.id.tv_version_info).text =
+            "v${BuildConfig.VERSION_NAME}　作者：鸿"
     }
 
     private fun setupListeners() {
