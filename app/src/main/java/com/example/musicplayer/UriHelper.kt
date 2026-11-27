@@ -2,9 +2,12 @@ package com.example.musicplayer
 
 import android.content.Context
 import android.database.Cursor
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.provider.OpenableColumns
+import java.io.File
 
 /**
  * 把通过存储访问框架得到的 Uri 转成可直接播放的 Uri。
@@ -59,6 +62,56 @@ object UriHelper {
             } catch (_: Exception) {
                 false
             }
+        }
+    }
+
+    /**
+     * 彻底删除一首歌：物理文件 + 系统媒体库索引一起删。
+     *
+     * 只调 File.delete() 的话，Android 11+ 的文件管理器（走 MediaStore）里文件仍在，
+     * 变成"幽灵文件"。所以有本地路径时，额外按 DATA 列删掉 MediaStore 记录并触发媒体扫描。
+     *
+     * @return true 表示物理文件删除成功
+     */
+    fun deleteAudioFile(context: Context, song: Song): Boolean {
+        val path = song.path
+        var physicalOk = false
+
+        if (path != null) {
+            // 有本地绝对路径（自建浏览界面添加）：直接删物理文件
+            physicalOk = try {
+                File(path).delete()
+            } catch (_: Exception) {
+                false
+            }
+            // 同步清理 MediaStore 索引，避免文件管理器显示幽灵文件
+            if (physicalOk) {
+                removeFromMediaStore(context, path)
+            }
+        } else {
+            // 只有 SAF content uri：走系统删除，会自动同步媒体库
+            physicalOk = deleteFile(context, song.uri)
+        }
+
+        return physicalOk
+    }
+
+    /** 按文件路径删除 MediaStore 中的音频记录，并触发媒体扫描刷新 */
+    private fun removeFromMediaStore(context: Context, path: String) {
+        try {
+            val volumeUri = MediaStore.Audio.Media.getContentUriForPath(path)
+                ?: MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            context.contentResolver.delete(
+                volumeUri,
+                "${MediaStore.MediaColumns.DATA}=?",
+                arrayOf(path)
+            )
+        } catch (_: Exception) {
+            // MediaStore 删除失败不影响物理文件已删除的结果
+        }
+        try {
+            MediaScannerConnection.scanFile(context, arrayOf(path), null, null)
+        } catch (_: Exception) {
         }
     }
 }

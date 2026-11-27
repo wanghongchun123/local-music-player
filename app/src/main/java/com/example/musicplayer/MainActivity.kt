@@ -707,8 +707,10 @@ class MainActivity : AppCompatActivity() {
         try {
             val sb = StringBuilder()
             for (s in list) {
-                sb.append(s.name).append('|').append(s.uri.toString())
-                if (s.path != null) sb.append('|').append(s.path)
+                // 字段内的 | 转义，避免和分隔符冲突导致解析错位
+                sb.append(s.name.replace("|", "%7C")).append('|')
+                    .append(s.uri.toString().replace("|", "%7C"))
+                if (s.path != null) sb.append('|').append(s.path.replace("|", "%7C"))
                 sb.append('\n')
             }
             cacheFileFor(dirUri).writeText(sb.toString())
@@ -724,9 +726,9 @@ class MainActivity : AppCompatActivity() {
             f.readText().split("\n").filter { it.isNotBlank() }.mapNotNull { line ->
                 val parts = line.split('|')
                 if (parts.size < 2) return@mapNotNull null
-                val name = parts[0]
-                val uriStr = parts[1]
-                val path = if (parts.size >= 3) parts[2] else null
+                val name = parts[0].replace("%7C", "|")
+                val uriStr = parts[1].replace("%7C", "|")
+                val path = if (parts.size >= 3) parts[2].replace("%7C", "|") else null
                 try {
                     Song(name, Uri.parse(uriStr), path)
                 } catch (_: Exception) {
@@ -918,13 +920,9 @@ class MainActivity : AppCompatActivity() {
         var deletedCount = 0
         var failCount = 0
         if (deleteSource) {
-            // 彻底删除本地源文件：优先用本地路径 File 删除，否则走 SAF
+            // 彻底删除本地源文件：物理文件 + MediaStore 索引一起删，避免文件管理器残留幽灵文件
             for (song in toDelete) {
-                val ok = if (song.path != null) {
-                    try { File(song.path).delete() } catch (_: Exception) { false }
-                } else {
-                    UriHelper.deleteFile(this, song.uri)
-                }
+                val ok = UriHelper.deleteAudioFile(this, song)
                 if (ok) deletedCount++ else failCount++
             }
         }
