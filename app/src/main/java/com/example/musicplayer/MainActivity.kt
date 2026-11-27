@@ -229,8 +229,6 @@ class MainActivity : AppCompatActivity() {
         btnPrev = findViewById(R.id.btn_prev)
         btnNext = findViewById(R.id.btn_next)
         listSongs = findViewById(R.id.list_songs)
-        findViewById<TextView>(R.id.tv_version_info).text =
-            "v${BuildConfig.VERSION_NAME}　作者：鸿"
     }
 
     private fun setupListeners() {
@@ -302,10 +300,16 @@ class MainActivity : AppCompatActivity() {
         if (items.isEmpty()) {
             items.add("（还没有目录，点下方添加）")
         }
+        val aboutIndex = items.size
+        items.add("关于")
 
         AlertDialog.Builder(this)
             .setTitle("目录管理")
             .setItems(items.toTypedArray()) { _, which ->
+                if (which == aboutIndex) {
+                    showAboutDialog()
+                    return@setItems
+                }
                 if (dirs.isEmpty()) {
                     // 空提示项被点击，直接打开选择器
                     openDirectoryPicker()
@@ -318,6 +322,15 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("添加目录") { _, _ -> openDirectoryPicker() }
             .setNeutralButton("删除目录") { _, _ -> showDeleteDirDialog(dirs) }
             .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /** 关于：显示版本号和作者 */
+    private fun showAboutDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("关于")
+            .setMessage("本地音乐播放器\nv${BuildConfig.VERSION_NAME}\n作者：鸿")
+            .setPositiveButton("确定", null)
             .show()
     }
 

@@ -143,15 +143,4 @@
         android:dividerHeight="1dp"
         android:paddingTop="8dp" />
 
-    <!-- 版本与作者信息 -->
-    <TextView
-        android:id="@+id/tv_version_info"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingTop="4dp"
-        android:paddingBottom="10dp"
-        android:textColor="#808080"
-        android:textSize="12sp" />
-
 </LinearLayout>
