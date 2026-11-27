@@ -11,8 +11,8 @@ android {
         applicationId "com.example.musicplayer"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 107
+        versionName "1.07"
     }
 
     buildTypes {
@@ -24,7 +24,7 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            output.outputFileName = "本地音乐播放器.apk"
+            output.outputFileName = "本地音乐播放器_v${variant.versionName}.apk"
         }
     }
 
